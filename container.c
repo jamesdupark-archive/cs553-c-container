@@ -11,16 +11,70 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sched.h>
+#include <errno.h>
 // #include
 
 #define CONTAINER_MEMORY 4096
+
+int setup_sysimg(char *url) {
+    struct stat *astat = malloc(sizeof(struct stat));
+    if (stat("alpine", astat) == 0) {
+        chdir("alpine");
+        return 1;
+    }
+    free(astat);
+    // dir doesn't exist, create and pull image
+    mkdir("alpine", 0755);
+    chdir("alpine");
+
+    // pull system image
+    pid_t pid;
+    int status;
+    if ((pid = fork()) == 0) {
+        char *args[] = {"curl", "-o", "sysimg.tar.gz", url, NULL};
+        execvp("curl", args);
+        perror("curl");
+        sem_unlink("veth");
+        exit(1);
+    }
+
+    if (waitpid(pid, &status, 0) < 0) {
+        perror("waitpid");
+        sem_unlink("veth");
+        exit(1);
+    }
+
+    // tar to unzip
+    if ((pid = fork()) == 0) {
+        char *rgs[] = {"tar", "xvf", "sysimg.tar.gz", NULL};
+        execvp("tar", rgs);
+        perror("tar");
+        sem_unlink("veth");
+        exit(1);
+    }
+
+    if (waitpid(pid, &status, 0) < 0) {
+        perror("waitpid");
+        sem_unlink("veth");
+        exit(1);
+    }
+
+    // remove file
+    if (remove("sysimg.tar.gz") < 0) {
+        perror("remove");
+        sem_unlink("veth");
+        exit(1);
+    }
+
+    return 0;
+}
 
 int add_veth(pid_t veth_pid, char* endpoint1, char* endpoint2) {
     pid_t pid;
     int status;
     // init veth
     if ((pid = fork()) == 0) {
-        signal(SIGTTOU, SIG_IGN);
+        // signal(SIGTTOU, SIG_IGN);
         char pid_string[21]; // supports up to 64-bit pids
         sprintf(pid_string, "%d", veth_pid);
         char *args[] = {"ip", "link", "add", endpoint1, "netns", "1", "type", "veth", "peer", endpoint2, "netns", pid_string, NULL};
@@ -43,7 +97,7 @@ int init_veth(char *host_ip, char *hostname) {
     int status;
     // add ip addr to veth
     if ((pid = fork()) == 0) {
-        signal(SIGTTOU, SIG_IGN);
+        // signal(SIGTTOU, SIG_IGN);
         char *args[] = {"ip", "addr", "add", host_ip, "dev", hostname, NULL};
         execvp("ip", args);
         perror("execvp");
@@ -57,7 +111,7 @@ int init_veth(char *host_ip, char *hostname) {
 
     // set veth up
     if ((pid = fork()) == 0) {
-        signal(SIGTTOU, SIG_IGN);
+        // signal(SIGTTOU, SIG_IGN);
         char *args[] = {"ip", "link", "set", hostname, "up", NULL};
         execvp("ip", args);
         perror("execvp");
@@ -108,18 +162,14 @@ int create_container(void *args) {
     //     perror("tcsetpgrp");
     //     exit(1);
     // }
-
-    // check if system image is present
-    struct stat *astat = malloc(sizeof(struct stat));
-    if (stat("alpine", astat) < 0) { // TODO: download and extract image, flags for image URL/location
-        perror("stat");
-    }
-    free(astat);
     
     
     // mount system image
-    chdir("alpine");
-    chroot(".");
+    if (chroot(".") < 0) {
+        perror("chroot");
+        sem_unlink("veth");
+        exit(1);
+    }
     
     // mount proc
     mount("proc", "proc", "proc", 0, NULL);
@@ -153,6 +203,9 @@ int main(int argc, char **argv) {
     // start new shell process
     pid_t pid;
     void *stack = malloc(CONTAINER_MEMORY);
+
+    // donwload filesystem if necessary
+    setup_sysimg("https://dl-cdn.alpinelinux.org/alpine/v3.17/releases/x86_64/alpine-minirootfs-3.17.3-x86_64.tar.gz");
 
     // set up networking semaphore
     sem_t *sem;
