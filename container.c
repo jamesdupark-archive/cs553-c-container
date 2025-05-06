@@ -16,10 +16,15 @@
 
 #define CONTAINER_MEMORY 4096
 
+void cleanup() {
+    sem_unlink("veth");
+}
+
 int setup_sysimg(char *url) {
     struct stat *astat = malloc(sizeof(struct stat));
     if (stat("alpine", astat) == 0) {
         chdir("alpine");
+        free(astat);
         return 1;
     }
     free(astat);
@@ -34,13 +39,11 @@ int setup_sysimg(char *url) {
         char *args[] = {"curl", "-o", "sysimg.tar.gz", url, NULL};
         execvp("curl", args);
         perror("curl");
-        sem_unlink("veth");
         exit(1);
     }
 
     if (waitpid(pid, &status, 0) < 0) {
         perror("waitpid");
-        sem_unlink("veth");
         exit(1);
     }
 
@@ -49,20 +52,17 @@ int setup_sysimg(char *url) {
         char *rgs[] = {"tar", "xvf", "sysimg.tar.gz", NULL};
         execvp("tar", rgs);
         perror("tar");
-        sem_unlink("veth");
         exit(1);
     }
 
     if (waitpid(pid, &status, 0) < 0) {
         perror("waitpid");
-        sem_unlink("veth");
         exit(1);
     }
 
     // remove file
     if (remove("sysimg.tar.gz") < 0) {
         perror("remove");
-        sem_unlink("veth");
         exit(1);
     }
 
@@ -135,7 +135,6 @@ int create_container(void *args) {
     sem_t *sem;
     if ((sem = sem_open("veth", 0)) == SEM_FAILED) {
         perror("semopen");
-        sem_unlink("veth");
         exit(1);
     }
 
@@ -143,7 +142,6 @@ int create_container(void *args) {
     int pid = getpid();
     if (setpgid(pid, pid) < 0) {
         perror("setpgid");
-        sem_unlink("veth");
         exit(1);
     }
 
@@ -151,7 +149,6 @@ int create_container(void *args) {
     signal(SIGTTOU, SIG_IGN);
     if (tcsetpgrp(STDIN_FILENO, pid) < 0) {
         perror("tcsetpgrp");
-        sem_unlink("veth");
         exit(1);
     }
     // if (tcsetpgrp(STDOUT_FILENO, pid) < 0) {
@@ -167,7 +164,6 @@ int create_container(void *args) {
     // mount system image
     if (chroot(".") < 0) {
         perror("chroot");
-        sem_unlink("veth");
         exit(1);
     }
     
@@ -177,7 +173,6 @@ int create_container(void *args) {
     // set up networking
     if (sem_wait(sem) < 0) { // wait for host side to set up
         perror("semwait");
-        sem_unlink("veth");
         exit(1);
     }
     sem_close(sem);
@@ -214,11 +209,14 @@ int main(int argc, char **argv) {
         sem_unlink("veth");
         exit(1);
     }
+    if (atexit(cleanup) < 0) {
+        perror("atexit");
+        exit(1);
+    }
     
     // clone
     if ((pid = clone(create_container, stack + CONTAINER_MEMORY, clone_flags, NULL)) < 0) {
         perror("clone");
-        sem_unlink("veth");
         exit(1);
     }
     // printf("child %d, parent %d : %d\n", pid, getpid(), getpgid(getpid()));
@@ -227,7 +225,6 @@ int main(int argc, char **argv) {
     init_veth("10.0.0.9/24", "host"); // TODO: unique hostnames and ip addresses per container?
     if (sem_post(sem) < 0) {
         perror("sempost");
-        sem_unlink("veth");
         exit(1);
     }
     sem_close(sem);
@@ -237,7 +234,6 @@ int main(int argc, char **argv) {
     int status = 0;
     if (waitpid(pid, &status, WUNTRACED) < 0) {
         perror("waitpid");
-        sem_unlink("veth");
         exit(1);
     }
     free(stack);

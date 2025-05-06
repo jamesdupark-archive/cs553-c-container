@@ -12,3 +12,6 @@ which will generate the execuable file `ccontainer` for you. Run the container a
 ./ccontainer <flags>
 ```
 The container executable accepts the following flags:
+* 
+# Dependencies
+Requires [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) to be installed on the course VM.
