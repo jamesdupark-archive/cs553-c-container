@@ -2,10 +2,12 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
+#include <semaphore.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sched.h>
@@ -13,18 +15,17 @@
 
 #define CONTAINER_MEMORY 4096
 
-int host_network(pid_t veth_pid, char *host_ip) {
+int add_veth(pid_t veth_pid, char* endpoint1, char* endpoint2) {
     pid_t pid;
     int status;
     // init veth
-    printf("new veth\n");
     if ((pid = fork()) == 0) {
         signal(SIGTTOU, SIG_IGN);
         char pid_string[21]; // supports up to 64-bit pids
         sprintf(pid_string, "%d", veth_pid);
-        char *args[] = {"/bin/ip", "link", "add", "host", "netns", "1", "type", "veth", "peer", "container", "netns", pid_string, NULL};
-        execv("/bin/ip", args);
-        perror("execv");
+        char *args[] = {"ip", "link", "add", endpoint1, "netns", "1", "type", "veth", "peer", endpoint2, "netns", pid_string, NULL};
+        execvp("ip", args);
+        perror("execvp");
         exit(1);
     }
     
@@ -34,14 +35,18 @@ int host_network(pid_t veth_pid, char *host_ip) {
         exit(1);
     }
 
-    printf("ip addr\n");
+    return 0;
+}
 
+int init_veth(char *host_ip, char *hostname) {
+    pid_t pid;
+    int status;
     // add ip addr to veth
     if ((pid = fork()) == 0) {
         signal(SIGTTOU, SIG_IGN);
-        char *args[] = {"/bin/ip", "addr", "add", host_ip, "dev", "host", NULL};
-        execv("/bin/ip", args);
-        perror("execv");
+        char *args[] = {"ip", "addr", "add", host_ip, "dev", hostname, NULL};
+        execvp("ip", args);
+        perror("execvp");
         exit(1);
     }
 
@@ -50,13 +55,12 @@ int host_network(pid_t veth_pid, char *host_ip) {
         exit(1);
     }
 
-    printf("link up\n");
     // set veth up
     if ((pid = fork()) == 0) {
         signal(SIGTTOU, SIG_IGN);
-        char *args[] = {"/bin/ip", "link", "set", "host", "up", NULL};
-        execv("/bin/ip", args);
-        perror("execv");
+        char *args[] = {"ip", "link", "set", hostname, "up", NULL};
+        execvp("ip", args);
+        perror("execvp");
         exit(1);
     }
 
@@ -71,12 +75,21 @@ int host_network(pid_t veth_pid, char *host_ip) {
 
 int create_container(void *args) {
     // char *args[] = {"/bin/chroot", ".", "sh", NULL};
-    char *av[] = {"/bin/sh", NULL};
+    char *av[] = {"sh", NULL};
+
+    // set up semaphore
+    sem_t *sem;
+    if ((sem = sem_open("veth", 0)) == SEM_FAILED) {
+        perror("semopen");
+        sem_unlink("veth");
+        exit(1);
+    }
 
     // set pgid and take terminal control
     int pid = getpid();
     if (setpgid(pid, pid) < 0) {
         perror("setpgid");
+        sem_unlink("veth");
         exit(1);
     }
 
@@ -84,6 +97,7 @@ int create_container(void *args) {
     signal(SIGTTOU, SIG_IGN);
     if (tcsetpgrp(STDIN_FILENO, pid) < 0) {
         perror("tcsetpgrp");
+        sem_unlink("veth");
         exit(1);
     }
     // if (tcsetpgrp(STDOUT_FILENO, pid) < 0) {
@@ -106,15 +120,23 @@ int create_container(void *args) {
     // mount system image
     chdir("alpine");
     chroot(".");
-
+    
     // mount proc
     mount("proc", "proc", "proc", 0, NULL);
-
-    // TODO: set up networking
+    
+    // set up networking
+    if (sem_wait(sem) < 0) { // wait for host side to set up
+        perror("semwait");
+        sem_unlink("veth");
+        exit(1);
+    }
+    sem_close(sem);
+    sem_unlink("veth");
+    init_veth("10.0.0.5/24", "container");
     
     // start shell
-    execv("/bin/sh", av);
-    perror("execv");
+    execvp("sh", av);
+    perror("execvp");
     exit(1);
 }
 
@@ -131,21 +153,43 @@ int main(int argc, char **argv) {
     // start new shell process
     pid_t pid;
     void *stack = malloc(CONTAINER_MEMORY);
-    if ((pid = clone(create_container, stack + CONTAINER_MEMORY, clone_flags, NULL)) < 0) {
-        perror("clone");
+
+    // set up networking semaphore
+    sem_t *sem;
+    if ((sem = sem_open("veth", O_CREAT | O_EXCL, O_RDWR, 0)) == SEM_FAILED) {
+        perror("semopen");
+        sem_unlink("veth");
         exit(1);
     }
-    sleep(2);
-    printf("child %d, parent %d : %d\n", pid, getpid(), getpgid(getpid()));
-    host_network(pid, "10.0.0.9/24"); // TODO: unique hostnames and ip addresses per container?
+    
+    // clone
+    if ((pid = clone(create_container, stack + CONTAINER_MEMORY, clone_flags, NULL)) < 0) {
+        perror("clone");
+        sem_unlink("veth");
+        exit(1);
+    }
+    // printf("child %d, parent %d : %d\n", pid, getpid(), getpgid(getpid()));
+    // set up host networking    
+    add_veth(pid, "host", "container");
+    init_veth("10.0.0.9/24", "host"); // TODO: unique hostnames and ip addresses per container?
+    if (sem_post(sem) < 0) {
+        perror("sempost");
+        sem_unlink("veth");
+        exit(1);
+    }
+    sem_close(sem);
     // design decision - do I return terminal control and sleep until a new container is requested?
 
+    sleep(1);
     int status = 0;
-    if (waitpid(pid, &status, 0) < 0) {
+    if (waitpid(pid, &status, WUNTRACED) < 0) {
         perror("waitpid");
+        sem_unlink("veth");
         exit(1);
     }
     free(stack);
+    sem_unlink("veth");
+    printf("exiting container!\n");
 
     return 0;
 }
