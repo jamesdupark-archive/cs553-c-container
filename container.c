@@ -17,7 +17,7 @@
 // #include
 
 #define STACK_SIZE 4096
-#define BENCHMARK
+// #define BENCHMARK
 
 #ifdef BENCHMARK
 struct timeval start, end;
@@ -40,7 +40,7 @@ double calc_elapsed() {
 }
 #endif
 
-int setup_sysimg(char *url) {
+int setup_sysimg(char *url) { // TODO: cp dd to /usr/bin, set up /dev/zero
     #ifdef BENCHMARK
     gettimeofday(&start, NULL);
     #endif
@@ -48,7 +48,10 @@ int setup_sysimg(char *url) {
     if (stat("alpine", astat) == 0) {
         chdir("alpine");
         free(astat);
-        img_ptime = 0;
+        #ifdef BENCHMARK
+        gettimeofday(&end, NULL);
+        img_ptime = calc_elapsed();
+        #endif
         return 1;
     }
     free(astat);
@@ -271,7 +274,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
     // printf("child %d, parent %d : %d\n", pid, getpid(), getpgid(getpid()));
-    // set up host networking    
+    // set up host networking
+    chdir("..");
     add_veth(pid, "host", "container");
     init_veth("10.0.0.9/24", "host"); // TODO: unique hostnames and ip addresses per container?
     if (sem_post(sem) < 0) {
