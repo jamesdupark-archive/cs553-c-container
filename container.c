@@ -7,24 +7,48 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
+#include <sys/time.h>
 #include <semaphore.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sched.h>
 #include <errno.h>
+#include <time.h>
 // #include
 
-#define CONTAINER_MEMORY 4096
+#define STACK_SIZE 4096
+#define BENCHMARK
+
+#ifdef BENCHMARK
+struct timeval start, end;
+double img_ptime, startuptime;
+#endif
 
 void cleanup() {
     sem_unlink("veth");
+    #ifdef BENCHMARK
+    sem_unlink("bench");
+    #endif
 }
 
+#ifdef BENCHMARK
+double calc_elapsed() {
+    long sec, usec;
+    sec = end.tv_sec - start.tv_sec;
+    usec = end.tv_usec - start.tv_usec;
+    return sec + usec*1e-6;
+}
+#endif
+
 int setup_sysimg(char *url) {
+    #ifdef BENCHMARK
+    gettimeofday(&start, NULL);
+    #endif
     struct stat *astat = malloc(sizeof(struct stat));
     if (stat("alpine", astat) == 0) {
         chdir("alpine");
         free(astat);
+        img_ptime = 0;
         return 1;
     }
     free(astat);
@@ -65,6 +89,11 @@ int setup_sysimg(char *url) {
         perror("remove");
         exit(1);
     }
+
+    #ifdef BENCHMARK
+    gettimeofday(&end, NULL);
+    img_ptime = calc_elapsed();
+    #endif
 
     return 0;
 }
@@ -137,6 +166,13 @@ int create_container(void *args) {
         perror("semopen");
         exit(1);
     }
+    #ifdef BENCHMARK
+    sem_t *timsem;
+    if ((timsem = sem_open("bench", 0)) == SEM_FAILED) {
+        perror("semopen");
+        exit(1);
+    }
+    #endif
 
     // set pgid and take terminal control
     int pid = getpid();
@@ -179,6 +215,10 @@ int create_container(void *args) {
     sem_unlink("veth");
     init_veth("10.0.0.5/24", "container");
     
+    #ifdef BENCHMARK
+    if (sem_post(timsem) < 0) perror("sempost");
+    sem_close(timsem);
+    #endif
     // start shell
     execvp("sh", av);
     perror("execvp");
@@ -190,16 +230,19 @@ int main(int argc, char **argv) {
     printf("Hello world! %d, %s\n", argc, argv[0]);
     // parse flags
     if (argc == 1) {
-
+        // print helpful message about usage
     }
 
-    int clone_flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET; // pfmn
+    #ifdef BENCHMARK
+    gettimeofday(&start, NULL);
+    #endif
+    int clone_flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD; // pfmn
 
     // start new shell process
     pid_t pid;
-    void *stack = malloc(CONTAINER_MEMORY);
+    void *stack = malloc(STACK_SIZE);
 
-    // donwload filesystem if necessary
+    // download filesystem if necessary
     setup_sysimg("https://dl-cdn.alpinelinux.org/alpine/v3.17/releases/x86_64/alpine-minirootfs-3.17.3-x86_64.tar.gz");
 
     // set up networking semaphore
@@ -209,13 +252,21 @@ int main(int argc, char **argv) {
         sem_unlink("veth");
         exit(1);
     }
+    #ifdef BENCHMARK
+    sem_t *timsem;
+    if ((timsem = sem_open("bench", O_CREAT | O_EXCL, O_RDWR, 0)) == SEM_FAILED) {
+        perror("semopen");
+        sem_unlink("bench");
+        exit(1);
+    }
+    #endif
     if (atexit(cleanup) < 0) {
         perror("atexit");
         exit(1);
     }
     
     // clone
-    if ((pid = clone(create_container, stack + CONTAINER_MEMORY, clone_flags, NULL)) < 0) {
+    if ((pid = clone(create_container, stack + STACK_SIZE, clone_flags, NULL)) < 0) {
         perror("clone");
         exit(1);
     }
@@ -228,17 +279,27 @@ int main(int argc, char **argv) {
         exit(1);
     }
     sem_close(sem);
+    #ifdef BENCHMARK
+    if (sem_wait(timsem) < 0) perror("semwait");
+    gettimeofday(&end, NULL);
+    startuptime = calc_elapsed();
+    #endif
+
     // design decision - do I return terminal control and sleep until a new container is requested?
 
-    sleep(1);
+    // sleep(1);
     int status = 0;
-    if (waitpid(pid, &status, WUNTRACED) < 0) {
+    if (waitpid(pid, &status, 0) < 0) {
         perror("waitpid");
         exit(1);
     }
     free(stack);
     sem_unlink("veth");
     printf("exiting container!\n");
+    #ifdef BENCHMARK
+    sem_unlink("bench");
+    printf("image pull time: %.6f | startup time: %.6f\n", img_ptime, startuptime);
+    #endif
 
     return 0;
 }
