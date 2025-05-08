@@ -1,0 +1,10 @@
+image pull time: 0.001116 | startup time: 0.116533
+image pull time: 0.000488 | startup time: 0.107791
+image pull time: 0.000541 | startup time: 0.103029
+image pull time: 0.000471 | startup time: 0.104343
+image pull time: 0.000786 | startup time: 0.103801
+image pull time: 0.000543 | startup time: 0.110010
+image pull time: 0.000736 | startup time: 0.096274
+image pull time: 0.000638 | startup time: 0.104224
+image pull time: 0.000618 | startup time: 0.109497
+image pull time: 0.000515 | startup time: 0.108052

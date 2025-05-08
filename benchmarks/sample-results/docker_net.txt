@@ -1,0 +1,5 @@
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+
+--- 172.17.0.2 ping statistics ---
+4998 packets transmitted, 4998 received, 0% packet loss, time 10000ms
+rtt min/avg/max/mdev = 0.007/0.010/0.208/0.006 ms, ipg/ewma 2.001/0.009 ms

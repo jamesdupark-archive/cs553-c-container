@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -g -Wall -std=gnu99
 BENCHFLAGS = -D BENCHMARK
-BENCHFLAGS += -Wl,--no-as-needed,-lprofiler,--as-needed
+BENCHFLAGS += -Wl,--no-as-needed,-lprofiler,--as-needed,-ltcmalloc,--as-needed
 EXECS = ccontainer bench
 CFILES = container.c
 

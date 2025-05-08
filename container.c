@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <sys/mount.h>
 #include <sys/time.h>
 #include <semaphore.h>
@@ -40,7 +41,7 @@ double calc_elapsed() {
 }
 #endif
 
-int setup_sysimg(char *url) { // TODO: cp dd to /usr/bin, set up /dev/zero
+int setup_sysimg(char *url) { // TODO: set up /dev/zero
     #ifdef BENCHMARK
     gettimeofday(&start, NULL);
     #endif
@@ -90,6 +91,20 @@ int setup_sysimg(char *url) { // TODO: cp dd to /usr/bin, set up /dev/zero
     // remove file
     if (remove("sysimg.tar.gz") < 0) {
         perror("remove");
+        exit(1);
+    }
+
+    // cp dd to /usr/bin
+    if ((pid = fork()) == 0) {
+        char *gs[] = {"cp", "../dd", "usr/bin/dd", NULL};
+        execvp("cp", gs);
+        perror("cp");
+        exit(1);
+    }
+
+    // set up dev/zero
+    if (mknod("dev/zero", S_IFCHR | S_IRUSR | S_IWUSR, makedev(1, 5)) < 0) {
+        perror("mknod");
         exit(1);
     }
 
@@ -160,8 +175,11 @@ int init_veth(char *host_ip, char *hostname) {
 }
 
 int create_container(void *args) {
-    // char *args[] = {"/bin/chroot", ".", "sh", NULL};
+    #ifndef BENCHMARK
     char *av[] = {"sh", NULL};
+    #else
+    char *av[] = {"sh", ".", NULL};
+    #endif
 
     // set up semaphore
     sem_t *sem;
@@ -232,9 +250,9 @@ int create_container(void *args) {
 int main(int argc, char **argv) {
     printf("Hello world! %d, %s\n", argc, argv[0]);
     // parse flags
-    if (argc == 1) {
-        // print helpful message about usage
-    }
+    // if (argc == 1) {
+    //     // print helpful message about usage
+    // }
 
     #ifdef BENCHMARK
     gettimeofday(&start, NULL);
@@ -302,7 +320,7 @@ int main(int argc, char **argv) {
     printf("exiting container!\n");
     #ifdef BENCHMARK
     sem_unlink("bench");
-    printf("image pull time: %.6f | startup time: %.6f\n", img_ptime, startuptime);
+    fprintf(stderr, "image pull time: %.6f | startup time: %.6f\n", img_ptime, startuptime);
     #endif
 
     return 0;
