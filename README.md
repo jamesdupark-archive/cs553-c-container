@@ -31,7 +31,8 @@ echo \
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
-
+## Benchmarking Dependencies
+Generating graphs was done via the jupyter notebook `
 <!-- Requires [gperftools](https://github.com/gperftools/gperftools) for profiling. 
 After installing (via GitHub or by downloading the latest release), run `./configure` followed by `make && sudo make install` to generate the library files (takes a long time). Additionally, `golang` and `pprof` are required to make sense of the generated data.
 ```bash

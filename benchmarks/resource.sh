@@ -12,7 +12,7 @@ sleep 1
 kill %%
 sudo ./bench
 
-sudo docker run -it 'docker-alpine' &
-sleep 1
+sudo docker run -it 'docker-alpine'
+sleep 3
 { ps -C docker -o pid,comm,%cpu,%mem; } > benchmarks/results/docker_res.txt
 kill -SIGKILL %%

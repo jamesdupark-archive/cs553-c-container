@@ -15,7 +15,6 @@
 #include <sched.h>
 #include <errno.h>
 #include <time.h>
-// #include
 
 #define STACK_SIZE 4096
 // #define BENCHMARK
@@ -41,7 +40,7 @@ double calc_elapsed() {
 }
 #endif
 
-int setup_sysimg(char *url) { // TODO: set up /dev/zero
+int setup_sysimg(char *url) { // TODO: refactor utility functions to separate file
     #ifdef BENCHMARK
     gettimeofday(&start, NULL);
     #endif
@@ -208,7 +207,7 @@ int create_container(void *args) {
         perror("tcsetpgrp");
         exit(1);
     }
-    // if (tcsetpgrp(STDOUT_FILENO, pid) < 0) {
+    // if (tcsetpgrp(STDOUT_FILENO, pid) < 0) { // necessary?
     //     perror("tcsetpgrp");
     //     exit(1);
     // }

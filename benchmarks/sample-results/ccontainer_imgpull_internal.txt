@@ -1,1 +1,1 @@
-image pull time: 27.339246 | startup time: 27.675555
+image pull time: 18.310020 | startup time: 18.439824

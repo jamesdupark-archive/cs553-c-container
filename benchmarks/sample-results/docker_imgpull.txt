@@ -19,74 +19,30 @@
 #4 sha256:920690a8d840be3c20bf5205001bc913be3a4d8c39ea191bbdaf8e187ffcb180 1.02kB / 1.02kB done
 #4 sha256:775f483016a7d128be2a6c6978785619990f9ac24abb5ff1868222020118b279 601B / 601B done
 #4 sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 3.39MB / 3.39MB 0.1s
-#4 extracting sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c
-#4 sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 3.39MB / 3.39MB 0.3s done
+#4 sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 3.39MB / 3.39MB 0.1s done
+#4 extracting sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 0.1s
 #4 extracting sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 0.2s done
-#4 DONE 0.7s
+#4 DONE 0.4s
 
 #5 [2/2] RUN apk add coreutils iperf3
-#5 0.528 fetch https://dl-cdn.alpinelinux.org/alpine/v3.17/main/x86_64/APKINDEX.tar.gz
-#5 0.750 fetch https://dl-cdn.alpinelinux.org/alpine/v3.17/community/x86_64/APKINDEX.tar.gz
-#5 1.123 (1/6) Installing libacl (2.3.1-r1)
-#5 1.131 (2/6) Installing libattr (2.5.1-r2)
-#5 1.135 (3/6) Installing skalibs (2.12.0.1-r0)
-#5 1.145 (4/6) Installing utmps-libs (0.1.2.0-r1)
-#5 1.149 (5/6) Installing coreutils (9.1-r0)
-#5 1.201 (6/6) Installing iperf3 (3.12-r1)
-#5 1.217 Executing busybox-1.35.0-r31.trigger
-#5 1.235 OK: 9 MiB in 21 packages
-#5 DONE 2.3s
+#5 0.300 fetch https://dl-cdn.alpinelinux.org/alpine/v3.17/main/x86_64/APKINDEX.tar.gz
+#5 0.552 fetch https://dl-cdn.alpinelinux.org/alpine/v3.17/community/x86_64/APKINDEX.tar.gz
+#5 0.939 (1/6) Installing libacl (2.3.1-r1)
+#5 0.943 (2/6) Installing libattr (2.5.1-r2)
+#5 0.947 (3/6) Installing skalibs (2.12.0.1-r0)
+#5 0.953 (4/6) Installing utmps-libs (0.1.2.0-r1)
+#5 0.957 (5/6) Installing coreutils (9.1-r0)
+#5 0.994 (6/6) Installing iperf3 (3.12-r1)
+#5 1.006 Executing busybox-1.35.0-r31.trigger
+#5 1.019 OK: 9 MiB in 21 packages
+#5 DONE 1.2s
 
 #6 exporting to image
 #6 exporting layers 0.1s done
-#6 writing image sha256:516c1c8486036bca341d69ad91b237cf030f36a2e7c0dbafab4fc71544756ea6 done
-#6 naming to docker.io/library/docker-alpine done
-#6 DONE 0.1s
-#0 building with "default" instance using docker driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 29B 0.1s
-#1 transferring dockerfile: 114B 0.2s done
-#1 DONE 0.2s
-
-#2 [internal] load metadata for docker.io/library/alpine:3.17
-#2 DONE 0.7s
-
-#3 [internal] load .dockerignore
-#3 transferring context:
-#3 transferring context: 2B 0.2s done
-#3 DONE 0.2s
-
-#4 [1/2] FROM docker.io/library/alpine:3.17@sha256:8fc3dacfb6d69da8d44e42390de777e48577085db99aa4e4af35f483eb08b989
-#4 resolve docker.io/library/alpine:3.17@sha256:8fc3dacfb6d69da8d44e42390de777e48577085db99aa4e4af35f483eb08b989 0.1s done
-#4 sha256:775f483016a7d128be2a6c6978785619990f9ac24abb5ff1868222020118b279 601B / 601B done
-#4 sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 0B / 3.39MB 0.1s
-#4 sha256:8fc3dacfb6d69da8d44e42390de777e48577085db99aa4e4af35f483eb08b989 8.08kB / 8.08kB done
-#4 sha256:920690a8d840be3c20bf5205001bc913be3a4d8c39ea191bbdaf8e187ffcb180 1.02kB / 1.02kB done
-#4 sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 3.39MB / 3.39MB 0.2s done
-#4 extracting sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c
-#4 extracting sha256:fbcfea79c1c4819e0689385057cfd4cbd2ee9ba20e6d420b360644788a22862c 0.4s done
-#4 DONE 0.9s
-
-#5 [2/2] RUN apk add coreutils iperf3
-#5 0.658 fetch https://dl-cdn.alpinelinux.org/alpine/v3.17/main/x86_64/APKINDEX.tar.gz
-#5 0.924 fetch https://dl-cdn.alpinelinux.org/alpine/v3.17/community/x86_64/APKINDEX.tar.gz
-#5 1.299 (1/6) Installing libacl (2.3.1-r1)
-#5 1.306 (2/6) Installing libattr (2.5.1-r2)
-#5 1.310 (3/6) Installing skalibs (2.12.0.1-r0)
-#5 1.317 (4/6) Installing utmps-libs (0.1.2.0-r1)
-#5 1.322 (5/6) Installing coreutils (9.1-r0)
-#5 1.365 (6/6) Installing iperf3 (3.12-r1)
-#5 1.374 Executing busybox-1.35.0-r31.trigger
-#5 1.386 OK: 9 MiB in 21 packages
-#5 DONE 1.6s
-
-#6 exporting to image
-#6 exporting layers 0.0s done
-#6 writing image sha256:377d00ca2809ae232e5221e66d287ec9facd01c73053ffdc905a0071ab2b324a done
+#6 writing image sha256:d4514987d111b32d740f95f6ca139fb80ab7cec2b04dd87f6d27e9f5a07ae417 done
 #6 naming to docker.io/library/docker-alpine done
 #6 DONE 0.1s
 
-real	0m6.515s
-user	0m0.230s
-sys	0m0.521s
+real	0m4.485s
+user	0m0.273s
+sys	0m0.452s

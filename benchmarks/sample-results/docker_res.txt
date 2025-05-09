@@ -1,2 +1,2 @@
     PID COMMAND         %CPU %MEM
-  26011 docker           143  0.3
+  13714 docker           0.1  0.3
